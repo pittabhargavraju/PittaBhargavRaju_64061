@@ -7,8 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1YYgWqNv_nRMkqhZdA01AiP_ngL8qqVmv
 """
 
-# If you're on Colab or a fresh env, uncomment the next line:
-# !pip install -q tensorflow==2.* numpy pandas scikit-learn matplotlib
+# Environment Setup: Libraries for Data Handling, Visualization & Model Training
 
 import os, json, random, itertools, datetime
 import numpy as np
@@ -50,7 +49,7 @@ X_test  = vectorize(x_test)
 y_train = np.array(y_train, dtype="float32")
 y_test  = np.array(y_test,  dtype="float32")
 
-# fixed, stratified train/val split (keep stable for fair A/B comparisons)
+# Consistent Stratified Train/Validation Split for Reliable Model Evaluation
 X_tr, X_val, y_tr, y_val = train_test_split(
     X_train, y_train, test_size=0.20, random_state=SEED, stratify=y_train
 )
@@ -70,7 +69,7 @@ def make_mlp(hidden_layers=2, units=64, activation="relu",
         if dropout > 0:
             x = layers.Dropout(dropout)(x)
 
-    # Binary sentiment → sigmoid
+    # Binary Sentiment Classification Head with Sigmoid Activation
     outputs = layers.Dense(1, activation="sigmoid")(x)
 
     model = keras.Model(inputs, outputs)
@@ -86,7 +85,7 @@ UNITS         = [32, 64]                 # requirement #2 (includes 32 & 64)
 LOSSES        = ["binary_crossentropy", "mse"]     # requirement #3
 ACTIVATIONS   = ["relu", "tanh"]         # requirement #4
 
-# Regularization options (requirement #5)
+# Experiment Setup: Regularization Variants & Training Parameters
 REGS = [
     {"dropout": 0.0, "l2": 0.0},
     {"dropout": 0.3, "l2": 0.0},
@@ -104,7 +103,7 @@ results = []
 
 for hl, u, loss, act, reg in itertools.product(HIDDEN_LAYERS, UNITS, LOSSES, ACTIVATIONS, REGS):
     do, l2 = reg["dropout"], reg["l2"]
-    # Skip the "too heavy" combo of using both big dropout and L2 simultaneously (we already cover each alone)
+
     if do > 0 and l2 > 0:
         continue
 
@@ -128,11 +127,11 @@ for hl, u, loss, act, reg in itertools.product(HIDDEN_LAYERS, UNITS, LOSSES, ACT
         callbacks=callbacks
     )
 
-    # Evaluate with restored best weights
+    # Evaluation with restored best weights
     val_loss, val_acc = model.evaluate(X_val, y_val, verbose=0)
     test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
 
-    # Save history for plotting/report
+    # Log Training History & Store Model Results for Analysis
     with open(os.path.join(ART_DIR, f"{name}_history.json"), "w") as f:
         json.dump(hist.history, f)
 
@@ -152,7 +151,7 @@ for hl, u, loss, act, reg in itertools.product(HIDDEN_LAYERS, UNITS, LOSSES, ACT
         "checkpoint": ckpt_path
     })
 
-    # free graph memory between runs
+    # Clear TensorFlow Session to Free GPU/Memory Resources Between Runs
     K.clear_session()
 
 len(results)
@@ -225,7 +224,7 @@ best = df_sorted_val.iloc[0]
 print("Best (by val):")
 display(best)
 
-# Load the saved best checkpoint and re-evaluate
+# Load the saved best checkpoint and re evaluate
 best_model = keras.models.load_model(best["checkpoint"])
 final_test_loss, final_test_acc = best_model.evaluate(X_test, y_test, verbose=0)
 
@@ -238,7 +237,7 @@ summary = {
 save_json(summary, os.path.join(ART_DIR, "best_config.json"))
 summary
 
-# Quickly compute AUC for the best model (not used for early stopping).
+# Clear Backend State to Prevent Memory Buildup Between Model Runs
 from sklearn.metrics import roc_auc_score
 
 y_prob = best_model.predict(X_test, batch_size=1024, verbose=0).ravel()
